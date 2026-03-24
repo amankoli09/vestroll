@@ -5,6 +5,9 @@ import { ConflictError } from "../utils/errors";
 
 export type KybStatus = (typeof kybStatusEnum.enumValues)[number];
 
+// Re-export from shared types for backward compatibility
+export { KYB_REJECTION_CODES, type KybRejectionCode } from "@/types/kyb";
+
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
@@ -22,6 +25,7 @@ export class KybService {
       return {
         status: "not_started" as KybStatus,
         rejectionReason: null,
+        rejectionCode: null,
         submittedAt: null,
       };
     }
@@ -29,6 +33,7 @@ export class KybService {
     return {
       status: verification.status,
       rejectionReason: verification.rejectionReason,
+      rejectionCode: verification.rejectionCode,
       submittedAt: verification.submittedAt,
     };
   }

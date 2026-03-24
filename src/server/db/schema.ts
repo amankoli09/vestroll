@@ -306,6 +306,7 @@ export const kybVerifications = pgTable("kyb_verifications", {
   formC02C07Url: varchar("form_c02_c07_url", { length: 1024 }),
   status: kybStatusEnum("status").default("pending").notNull(),
   rejectionReason: text("rejection_reason"),
+  rejectionCode: varchar("rejection_code", { length: 100 }),
   submittedAt: timestamp("submitted_at"),
   reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
