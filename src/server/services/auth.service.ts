@@ -16,6 +16,7 @@ import { SessionManagementService } from "./session-management.service";
 import { AccountLockoutService } from "./account-lockout.service";
 import { RateLimitService } from "./rate-limit.service";
 import { LoginAttemptService } from "./login-attempt.service";
+import { LogoutService } from "./logout.service";
 import { eq } from "drizzle-orm";
 import { LoginInput } from "../validations/login.schema";
 import { RegisterInput } from "../validations/auth.schema";
@@ -366,5 +367,14 @@ export class AuthService {
       .update(users)
       .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  static async logout(
+    refreshToken?: string | null,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ) {
+    // Client-side biometric session state (if any) should be cleared by the frontend
+    // upon receiving a successful logout response.
+    await LogoutService.logout(refreshToken, metadata);
   }
 }
