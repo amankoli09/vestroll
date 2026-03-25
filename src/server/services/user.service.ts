@@ -75,12 +75,40 @@ export class UserService {
     return user || null;
   }
 
-  static async updateStatus(userId: string, status: UserStatus) {
+  static async update(
+    userId: string,
+    data: Partial<typeof users.$inferInsert>,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ) {
+    const oldUser = await this.findById(userId);
+    if (!oldUser) return null;
+
     const [updatedUser] = await db
       .update(users)
-      .set({ status, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
+
+    if (updatedUser) {
+      if (data.email && data.email !== oldUser.email) {
+        await AuditLogService.logEmailChange({
+          userId,
+          oldEmail: oldUser.email,
+          newEmail: updatedUser.email,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+        });
+      }
+      if (data.role && data.role !== oldUser.role) {
+        await AuditLogService.logRoleChange({
+          userId,
+          oldRole: oldUser.role || "N/A",
+          newRole: updatedUser.role || "N/A",
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+        });
+      }
+    }
 
     return updatedUser || null;
   }
