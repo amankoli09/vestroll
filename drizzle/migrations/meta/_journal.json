@@ -71,6 +71,13 @@
       "when": 1742831150000,
       "tag": "0007_add_user_signer_type",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1742900000000,
+      "tag": "0008_passkey_registration_challenges",
+      "breakpoints": true
     }
   ]
 }

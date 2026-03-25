@@ -57,7 +57,8 @@ describe("OAuthUserProvisioningService", () => {
             };
 
             const result = await OAuthUserProvisioningService.provisionUser(
-                googleUserInfo
+                googleUserInfo,
+                "google",
             );
 
             expect(result).toEqual(mockUser);
@@ -116,7 +117,8 @@ describe("OAuthUserProvisioningService", () => {
             };
 
             const result = await OAuthUserProvisioningService.provisionUser(
-                googleUserInfo
+                googleUserInfo,
+                "google",
             );
 
             expect(result.oauthId).toBe("google-456");
@@ -169,7 +171,8 @@ describe("OAuthUserProvisioningService", () => {
             };
 
             const result = await OAuthUserProvisioningService.provisionUser(
-                googleUserInfo
+                googleUserInfo,
+                "google",
             );
 
             expect(result.id).toBe("user-789");

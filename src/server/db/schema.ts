@@ -245,6 +245,23 @@ export const biometricLogs = pgTable("biometric_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/** Server-issued WebAuthn registration challenges; hashed at rest, time-bound and single-use. */
+export const passkeyRegistrationChallenges = pgTable(
+  "passkey_registration_challenges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    challengeHash: varchar("challenge_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("passkey_registration_challenges_user_id_idx").on(table.userId),
+  ],
+);
+
 export const employees = pgTable(
   "employees",
   {

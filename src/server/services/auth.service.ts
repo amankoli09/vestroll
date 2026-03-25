@@ -1,4 +1,12 @@
-import { db, emailVerifications, users, organizations, loginAttempts, biometricLogs } from "../db";
+import {
+  db,
+  emailVerifications,
+  users,
+  organizations,
+  loginAttempts,
+  biometricLogs,
+  passkeyRegistrationChallenges,
+} from "../db";
 import pc from "picocolors";
 import crypto from "crypto";
 import { AuditLogService } from "./audit-log.service";
@@ -19,9 +27,19 @@ import { AccountLockoutService } from "./account-lockout.service";
 import { RateLimitService } from "./rate-limit.service";
 import { LoginAttemptService } from "./login-attempt.service";
 import { LogoutService } from "./logout.service";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { LoginInput } from "../validations/login.schema";
-import { RegisterInput } from "../validations/auth.schema";
+import {
+  RegisterInput,
+  PasskeyRegistrationInput,
+} from "../validations/auth.schema";
+
+/** Max age for a passkey registration challenge (WebAuthn-style short TTL). */
+const PASSKEY_REGISTRATION_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+function hashPasskeyRegistrationChallenge(challenge: string): string {
+  return crypto.createHash("sha256").update(challenge, "utf8").digest("hex");
+}
 
 export class AuthService {
   static async register(data: RegisterInput) {
@@ -399,10 +417,74 @@ export class AuthService {
     });
   }
 
+  /**
+   * Issues a fresh registration challenge for the user. Replaces any prior unconsumed challenge.
+   * Call before `navigator.credentials.create()` (or equivalent); TTL is five minutes.
+   */
+  static async issuePasskeyRegistrationChallenge(
+    userId: string,
+  ): Promise<{ challenge: string }> {
+    const challenge = crypto.randomBytes(32).toString("base64url");
+    const challengeHash = hashPasskeyRegistrationChallenge(challenge);
+    const expiresAt = new Date(Date.now() + PASSKEY_REGISTRATION_CHALLENGE_TTL_MS);
+
+    await db
+      .delete(passkeyRegistrationChallenges)
+      .where(eq(passkeyRegistrationChallenges.userId, userId));
+
+    await db.insert(passkeyRegistrationChallenges).values({
+      userId,
+      challengeHash,
+      expiresAt,
+    });
+
+    return { challenge };
+  }
+
+  
+  static async consumePasskeyRegistrationChallenge(
+    userId: string,
+    challenge: string,
+  ): Promise<void> {
+    const challengeHash = hashPasskeyRegistrationChallenge(challenge);
+
+    const [row] = await db
+      .select()
+      .from(passkeyRegistrationChallenges)
+      .where(
+        and(
+          eq(passkeyRegistrationChallenges.userId, userId),
+          eq(passkeyRegistrationChallenges.challengeHash, challengeHash),
+        ),
+      )
+      .limit(1);
+
+    if (!row) {
+      throw new BadRequestError("Invalid challenge");
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      await db
+        .delete(passkeyRegistrationChallenges)
+        .where(eq(passkeyRegistrationChallenges.id, row.id));
+      throw new BadRequestError("Expired");
+    }
+
+    await db
+      .delete(passkeyRegistrationChallenges)
+      .where(eq(passkeyRegistrationChallenges.id, row.id));
+  }
+
   static async enrollBiometrics(
     userId: string,
+    registration: PasskeyRegistrationInput,
     metadata?: { ipAddress?: string; userAgent?: string },
   ) {
+    await AuthService.consumePasskeyRegistrationChallenge(
+      userId,
+      registration.challenge,
+    );
+
     // Logic for enrolling a new passkey would go here
     // ...
 
