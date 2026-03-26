@@ -86,7 +86,41 @@ export class FlutterwaveProvider implements PaymentProvider {
   async generateVirtualAccount(
     request: VirtualAccountRequest,
   ): Promise<VirtualAccountResult> {
-    throw new Error("Not implemented");
+    const response = await fetch(
+      `${this.config.baseUrl}/v3/virtual-account-numbers`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.secretKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: request.customerEmail,
+          is_permanent: true,
+          tx_ref: request.reference,
+          amount: 0,
+          currency: request.currency,
+        }),
+      },
+    );
+
+    const data = await safeJson(response);
+
+    if (!response.ok || data.status !== "success") {
+      Logger.error("Flutterwave virtual account creation failed", {
+        reference: request.reference,
+        message: data.message,
+      });
+      throw FlutterwaveProvider.mapError(response.status, data.message);
+    }
+
+    return {
+      accountNumber: data.data.account_number,
+      accountName: request.accountName,
+      bankName: data.data.bank_name,
+      bankCode: "",
+      reference: data.data.order_ref,
+    };
   }
 
   private static mapError(httpStatus: number, message?: string): AppError {

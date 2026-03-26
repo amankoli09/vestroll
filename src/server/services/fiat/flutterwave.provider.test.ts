@@ -156,4 +156,75 @@ describe("FlutterwaveProvider", () => {
       expect(result.status).toBe("pending");
     });
   });
+
+  describe("generateVirtualAccount", () => {
+    it("creates a virtual account and returns mapped result", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: "success",
+          message: "Virtual account created",
+          data: {
+            account_number: "8000012345",
+            bank_name: "Wema Bank",
+            order_ref: "va-ref-001",
+          },
+        }),
+      });
+
+      const result = await provider.generateVirtualAccount({
+        reference: "va-ref-001",
+        accountName: "Jane Doe",
+        customerEmail: "jane@example.com",
+        customerName: "Jane Doe",
+        currency: "NGN",
+      });
+
+      expect(result).toEqual({
+        accountNumber: "8000012345",
+        accountName: "Jane Doe",
+        bankName: "Wema Bank",
+        bankCode: "",
+        reference: "va-ref-001",
+      });
+
+      // Verify the request sent to Flutterwave
+      const [url, options] = fetchMock.mock.calls[0];
+      expect(url).toBe(
+        "https://api.flutterwave.com/v3/virtual-account-numbers",
+      );
+      expect(options.method).toBe("POST");
+      expect(options.headers["Authorization"]).toBe("Bearer test-secret-key");
+      const body = JSON.parse(options.body);
+      expect(body).toEqual({
+        email: "jane@example.com",
+        is_permanent: true,
+        tx_ref: "va-ref-001",
+        amount: 0,
+        currency: "NGN",
+      });
+    });
+
+    it("throws BadRequestError when Flutterwave rejects the request", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        json: async () => ({
+          status: "error",
+          message: "Duplicate tx_ref",
+          data: null,
+        }),
+      });
+
+      await expect(
+        provider.generateVirtualAccount({
+          reference: "dup-ref",
+          accountName: "Dup",
+          customerEmail: "dup@example.com",
+          customerName: "Dup User",
+          currency: "NGN",
+        }),
+      ).rejects.toThrow("Duplicate tx_ref");
+    });
+  });
 });
