@@ -1,4 +1,4 @@
--- Migration: 0008_add_transaction_cache
+-- Migration: 0010_add_transaction_cache
 -- Adds the transaction_cache table for idempotent transaction submissions (Issue #317)
 
 CREATE TABLE IF NOT EXISTS "transaction_cache" (
