@@ -314,6 +314,21 @@ export class BlockchainService {
       this.networkConfig.networkPassphrase,
     ) as Transaction | FeeBumpTransaction;
 
+    // Extract hash from the XDR to use as the idempotency key
+    const hash = tx.hash().toString("hex");
+
+    // ── Idempotency check: return cached result if already submitted ──
+    const { TransactionIdempotencyCache } = await import(
+      "../utils/transaction-idempotency"
+    );
+    const cached = await TransactionIdempotencyCache.has(hash);
+    if (cached) {
+      Logger.info("Duplicate transaction detected — returning cached result", {
+        hash,
+      });
+      return cached;
+    }
+
     const sendResponse = await this.rpcServer.sendTransaction(tx);
 
     if (sendResponse.status !== "PENDING") {
@@ -347,12 +362,17 @@ export class BlockchainService {
     const successResp =
       finalResponse as Api.GetSuccessfulTransactionResponse;
 
-    return {
+    const result: SubmissionResult = {
       hash: sendResponse.hash,
       status: finalResponse.status,
       ledger: successResp.ledger,
       resultXdr: successResp.resultXdr?.toXDR("base64"),
     };
+
+    // ── Cache the result to prevent re-submission ──
+    await TransactionIdempotencyCache.set(hash, result);
+
+    return result;
   }
 
   async buildContractCallXdr(params: {
