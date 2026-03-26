@@ -33,6 +33,7 @@ import {
   RegisterInput,
   PasskeyRegistrationInput,
 } from "../validations/auth.schema";
+import { generateSlug } from "../utils/slug";
 
 /** Max age for a passkey registration challenge (WebAuthn-style short TTL). */
 const PASSKEY_REGISTRATION_CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -67,10 +68,12 @@ export class AuthService {
       let organizationId: string | undefined;
 
       if (companyName) {
+        const slug = generateSlug(companyName);
         const [org] = await tx
           .insert(organizations)
           .values({
             name: companyName,
+            slug,
             industry: companyIndustry,
             registeredCountry: headquarterCountry,
           })
