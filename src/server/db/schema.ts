@@ -11,6 +11,53 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+export const userStatusEnum = pgEnum("user_status", [
+  "pending_verification",
+  "active",
+  "suspended",
+]);
+export const twoFactorMethodEnum = pgEnum("two_factor_method", [
+  "totp",
+  "backup_code",
+]);
+export const oauthProviderEnum = pgEnum("oauth_provider", ["google", "apple"]);
+export const kybStatusEnum = pgEnum("kyb_status", [
+  "not_started",
+  "pending",
+  "verified",
+  "rejected",
+]);
+export const leaveStatusEnum = pgEnum("leave_status", ["Pending", "Approved", "Rejected", "Cancelled",]);
+export const leaveTypeEnum = pgEnum("leave_type", ["vacation", "sick", "personal", "other",]);
+export const contractStatusEnum = pgEnum("contract_status", [
+  "pending_signature",
+  "in_review",
+  "rejected",
+  "active",
+  "completed",
+]);
+export const contractTypeEnum = pgEnum("contract_type", [
+  "fixed_rate",
+  "pay_as_you_go",
+  "milestone",
+]);
+export const employeeStatusEnum = pgEnum("employee_status", [
+  "Active",
+  "Inactive",
+]);
+export const employeeTypeEnum = pgEnum("employee_type", [
+  "Freelancer",
+  "Contractor",
+]);
+export const paymentTypeEnum = pgEnum("payment_type", ["crypto", "fiat"]);
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "pending",
+  "approved",
+  "unpaid",
+  "overdue",
+  "paid",
+  "rejected",
+]);
 export const milestoneStatusEnum = pgEnum("milestone_status", [
   "pending",
   "in_progress",
@@ -195,10 +242,28 @@ export const employees = pgTable(
     userId: uuid("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    // Bank account details
+    bankName: varchar("bank_name", { length: 255 }),
+    accountNumber: varchar("account_number", { length: 255 }),
+    routingNumber: varchar("routing_number", { length: 255 }),
+    sortCode: varchar("sort_code", { length: 255 }),
+    iban: varchar("iban", { length: 34 }),
+    swiftCode: varchar("swift_code", { length: 11 }),
+    accountType: varchar("account_type", { length: 50 }),
+    accountHolderName: varchar("account_holder_name", { length: 255 }),
+    isAccountVerified: boolean("is_account_verified").default(false).notNull(),
+    accountVerifiedAt: timestamp("account_verified_at"),
+    bankAddress: varchar("bank_address", { length: 500 }),
+    bankCity: varchar("bank_city", { length: 255 }),
+    bankCountry: varchar("bank_country", { length: 255 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("employees_organization_id_idx").on(table.organizationId)],
+  (table) => [
+    index("employees_organization_id_idx").on(table.organizationId),
+    index("employees_account_number_idx").on(table.accountNumber),
+    index("employees_routing_number_idx").on(table.routingNumber),
+  ],
 );
 
 export const companyProfiles = pgTable("company_profiles", {
