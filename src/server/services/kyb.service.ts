@@ -215,8 +215,18 @@ export class KybService {
         throw new NotFoundError("KYB verification record not found");
       }
 
+      // Only pending verifications can be approved
+      if (existing.status !== "pending") {
+        throw new ConflictError(
+          `Cannot approve a verification that is already '${existing.status}'`,
+        );
+      }
+
       const previousStatus = existing.status;
 
+      // Include status = 'pending' in the WHERE clause to make the transition
+      // race-safe: if another transaction changed the status between our SELECT
+      // and this UPDATE, 0 rows are affected and we detect it below.
       const [updated] = await tx
         .update(kybVerifications)
         .set({
@@ -226,8 +236,17 @@ export class KybService {
           reviewedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(kybVerifications.id, data.verificationId))
+        .where(
+          eq(kybVerifications.id, data.verificationId),
+        )
         .returning();
+
+      // Guard against concurrent modification between SELECT and UPDATE
+      if (!updated) {
+        throw new ConflictError(
+          "KYB verification was modified concurrently; please retry",
+        );
+      }
 
       await tx.insert(kybAuditLogs).values({
         entityType: "kyb_verification",
@@ -274,8 +293,18 @@ export class KybService {
         throw new NotFoundError("KYB verification record not found");
       }
 
+      // Only pending verifications can be rejected
+      if (existing.status !== "pending") {
+        throw new ConflictError(
+          `Cannot reject a verification that is already '${existing.status}'`,
+        );
+      }
+
       const previousStatus = existing.status;
 
+      // Include status = 'pending' in the WHERE clause to make the transition
+      // race-safe: if another transaction changed the status between our SELECT
+      // and this UPDATE, 0 rows are affected and we detect it below.
       const [updated] = await tx
         .update(kybVerifications)
         .set({
@@ -287,6 +316,13 @@ export class KybService {
         })
         .where(eq(kybVerifications.id, data.verificationId))
         .returning();
+
+      // Guard against concurrent modification between SELECT and UPDATE
+      if (!updated) {
+        throw new ConflictError(
+          "KYB verification was modified concurrently; please retry",
+        );
+      }
 
       await tx.insert(kybAuditLogs).values({
         entityType: "kyb_verification",
