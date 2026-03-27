@@ -1,6 +1,3 @@
-import { db } from "../db";
-import { organizations, users, employees, milestones } from "../db/schema";
-import { generateSlug } from "../utils/slug";
 /**
  * Comprehensive seed script for Vestroll.
  *
@@ -26,6 +23,7 @@ import {
   contracts,
   timesheets,
 } from "./schema";
+import { generateSlug } from "../utils/slug";
 import { eq } from "drizzle-orm";
 
 faker.seed(42);
@@ -122,14 +120,6 @@ function randomDate(start: Date, end: Date): Date {
 }
 
 async function seed() {
-  const org = await db
-    .insert(organizations)
-    .values({
-      name: "Vestroll Inc",
-      slug: generateSlug("Vestroll Inc"),
-      industry: "Fintech",
-    })
-    .returning();
   console.log("Starting seed...\n");
 
   console.log("Upserting organization...");
@@ -149,6 +139,7 @@ async function seed() {
       .insert(organizations)
       .values({
         name: "Vestroll Inc.",
+        slug: generateSlug("Vestroll Inc."),
         industry: "Fintech",
         registrationNumber: "RC-1234567",
         registeredStreet: "14 Innovation Drive",
@@ -260,7 +251,7 @@ async function seed() {
             "First Bank",
           ]),
           accountNumber: faker.finance.accountNumber(10),
-          accountName: `${firstName} ${lastName}`,
+          accountHolderName: `${firstName} ${lastName}`,
         })
         .onConflictDoNothing()
         .returning({ id: employees.id });

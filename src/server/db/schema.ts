@@ -316,6 +316,8 @@ export const employees = pgTable(
       onDelete: "set null",
     }),
     // Bank account details
+    bankName: varchar("bank_name", { length: 255 }),
+    accountNumber: varchar("account_number", { length: 255 }),
     routingNumber: varchar("routing_number", { length: 255 }),
     sortCode: varchar("sort_code", { length: 255 }),
     iban: varchar("iban", { length: 34 }),
