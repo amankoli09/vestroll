@@ -583,6 +583,23 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const kybAuditLogs = pgTable(
+  "kyb_audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entityType: varchar("entity_type", { length: 100 }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    action: varchar("action", { length: 255 }).notNull(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("kyb_audit_logs_entity_id_idx").on(table.entityId),
+    index("kyb_audit_logs_actor_id_idx").on(table.actorId),
+  ],
+);
+
 export const fiatTransactions = pgTable(
   "fiat_transactions",
   {
